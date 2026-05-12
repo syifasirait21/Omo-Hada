@@ -382,9 +382,14 @@ function OmoHadaModel({ onPartClick }: { onPartClick?: (part: 'ehomo' | 'diwa' |
         scale={4.0} // Robust scale for visibility
         onClick={(e: any) => {
           e.stopPropagation();
-          const parts: ('ehomo' | 'diwa' | 'paku')[] = ['ehomo', 'diwa', 'paku'];
-          const randomPart = parts[Math.floor(Math.random() * parts.length)];
-          onPartClick?.(randomPart);
+          const name = (e.object?.name || '').toLowerCase();
+          let part: 'ehomo' | 'diwa' | 'paku' | undefined;
+          
+          if (name.includes('roof') || name.includes('atap') || name.includes('paku')) part = 'paku';
+          else if (name.includes('pillar') || name.includes('tiang') || name.includes('diwa')) part = 'diwa';
+          else if (name.includes('base') || name.includes('stone') || name.includes('ehomo')) part = 'ehomo';
+          
+          onPartClick?.(part as any);
         }}
       />
     </Center>
@@ -1027,6 +1032,23 @@ function MeaningfulPage() {
     }
   };
 
+  const handleModelClick = (part?: string) => {
+    if (!explorationMode) return;
+    
+    playKnock();
+    
+    const validParts: (keyof typeof anatomyDetails)[] = ['ehomo', 'diwa', 'paku'];
+    
+    if (part && validParts.includes(part as any)) {
+      setActiveModal(part as any);
+    } else if (activeModal) {
+      // Cycle through parts if target is ambiguous
+      const currentIndex = validParts.indexOf(activeModal);
+      const nextIndex = (currentIndex + 1) % validParts.length;
+      setActiveModal(validParts[nextIndex]);
+    }
+  };
+
   return (
     <div className="flex flex-col bg-cream-bg font-sans">
       <header className="pt-4 pb-3 text-center relative border-b border-stone-200/50">
@@ -1046,21 +1068,16 @@ function MeaningfulPage() {
           {/* Main 3D Viewer Area */}
           <div className="relative w-full aspect-[4/3] bg-stone-100 rounded-[40px] overflow-hidden border-2 border-white shadow-2xl group ring-1 ring-stone-200">
             <Suspense fallback={<Loader />}>
-              <House3DViewer useModel={true} onPartClick={(part) => {
-                if (explorationMode) {
-                  playKnock();
-                  setActiveModal(part);
-                }
-              }} />
+              <House3DViewer useModel={true} onPartClick={handleModelClick} />
             </Suspense>
             
             <div className={`absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full border border-stone-200 text-[10px] font-black uppercase tracking-widest transition-all duration-500 flex items-center gap-2 ${
-              explorationMode ? 'text-brick-red border-brick-red/30 shadow-lg scale-110' : 'text-stone-500 opacity-0 group-hover:opacity-100'
+              explorationMode ? 'text-brick-red border-brick-red/30 shadow-lg scale-110 z-20' : 'text-stone-500 opacity-0 group-hover:opacity-100'
             }`}>
               {explorationMode ? (
                 <>
                   <div className="w-1.5 h-1.5 bg-brick-red rounded-full animate-ping" />
-                  Mode Eksplorasi:Klik Bagian Rumah
+                  Mode Eksplorasi: Ketuk Rumah
                 </>
               ) : (
                 'Slide putar • Zoom detail'
