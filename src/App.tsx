@@ -364,14 +364,22 @@ function OmoHadaModel({ isShaking, simulationResult, onPartClick }: {
   const { scene } = useGLTF('/omo-hada.glb');
   const clonedScene = React.useMemo(() => scene.clone(), [scene]);
   const groupRef = useRef<THREE.Group>(null);
+  const partsRef = useRef<{ [key: string]: THREE.Object3D }>({});
   
   useEffect(() => {
     clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.castShadow = true;
         child.receiveShadow = true;
+        
+        // Target key parts for independent "shattering"
+        const name = child.name.toLowerCase();
+        if (name.includes('roof') || name.includes('atap')) partsRef.current['roof'] = child;
+        if (name.includes('pillar') || name.includes('tiang')) partsRef.current['pillars'] = child;
+        if (name.includes('wall') || name.includes('dinding')) partsRef.current['walls'] = child;
+        if (name.includes('base') || name.includes('stone')) partsRef.current['base'] = child;
+
         if (child.material) {
-          // Ensure textures/colors are bright
           if ('emissive' in child.material) {
              (child.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.2;
           }
@@ -383,7 +391,6 @@ function OmoHadaModel({ isShaking, simulationResult, onPartClick }: {
   useFrame((state) => {
     if (!groupRef.current) return;
 
-    // Simulation logic
     if (isShaking) {
       const shakeIntensity = 0.15;
       const speed = 50;
@@ -391,9 +398,24 @@ function OmoHadaModel({ isShaking, simulationResult, onPartClick }: {
       groupRef.current.position.z = Math.cos(state.clock.elapsedTime * speed * 0.9) * shakeIntensity;
       groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * speed * 0.5) * 0.02;
     } else if (simulationResult === 'collapsed') {
-      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, -3.5, 0.05);
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -Math.PI * 0.15, 0.05);
-      groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, Math.PI * 0.1, 0.03);
+      // DRAMATIC "HANCUR" EFFECT
+      // The whole structure topples
+      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, -3.5, 0.04);
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -Math.PI * 0.25, 0.03);
+      groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, Math.PI * 0.15, 0.04);
+      
+      // Individual parts "break away"
+      Object.entries(partsRef.current).forEach(([key, part]) => {
+        if (key === 'roof') {
+          part.position.y = THREE.MathUtils.lerp(part.position.y, 0.5, 0.02);
+          part.rotation.x = THREE.MathUtils.lerp(part.rotation.x, 0.4, 0.02);
+        } else if (key === 'pillars') {
+          part.position.x += (Math.random() - 0.5) * 0.02;
+          part.rotation.z = THREE.MathUtils.lerp(part.rotation.z, Math.PI * 0.2, 0.02);
+        } else if (key === 'walls') {
+          part.rotation.y = THREE.MathUtils.lerp(part.rotation.y, Math.PI * 0.3, 0.02);
+        }
+      });
     } else {
       groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, 0, 0.1);
       groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, 0, 0.1);
@@ -401,6 +423,16 @@ function OmoHadaModel({ isShaking, simulationResult, onPartClick }: {
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, 0.1);
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, 0, 0.1);
       groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, 0, 0.1);
+      
+      // Reset individual parts
+      Object.values(partsRef.current).forEach((part) => {
+        part.position.x = THREE.MathUtils.lerp(part.position.x, 0, 0.1);
+        part.position.y = THREE.MathUtils.lerp(part.position.y, 0, 0.1);
+        part.position.z = THREE.MathUtils.lerp(part.position.z, 0, 0.1);
+        part.rotation.x = THREE.MathUtils.lerp(part.rotation.x, 0, 0.1);
+        part.rotation.y = THREE.MathUtils.lerp(part.rotation.y, 0, 0.1);
+        part.rotation.z = THREE.MathUtils.lerp(part.rotation.z, 0, 0.1);
+      });
     }
   });
 
