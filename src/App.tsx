@@ -6,7 +6,7 @@
 import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, PerspectiveCamera, Environment, ContactShadows, useGLTF, Html, useProgress } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment, ContactShadows, Float, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import { 
   Heart, 
@@ -120,178 +120,179 @@ function NiasAtmosphere() {
   );
 }
 
-// --- Error Boundary for 3D ---
-
-class ErrorBoundary extends React.Component<{ children: React.ReactNode, onFatalError?: () => void }, { hasError: boolean }> {
-  constructor(props: any) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error("3D Canvas Error:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-stone-900/95 backdrop-blur-md p-8 text-center">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1, rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 0.5 }}
-          >
-            <AlertTriangle size={48} className="text-nias-gold mb-4" />
-          </motion.div>
-          <h3 className="text-white font-black text-sm uppercase tracking-widest mb-2">MODEL GAGAL DIMUAT</h3>
-          <p className="text-stone-400 font-bold text-[10px] leading-relaxed mb-6 max-w-[200px]">
-            Masalah koneksi, memori, atau file model tidak ditemukan. Pastikan koneksi stabil.
-          </p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full max-w-[180px] py-4 bg-nias-gold text-stone-900 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-transform"
-          >
-            REFRESH HALAMAN
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 // --- 3D Components ---
 
-function OmoHadaModel({ isShaking, simulationResult }: { isShaking?: boolean, simulationResult?: 'steady' | 'collapsed' | null }) {
-  const meshRef = useRef<THREE.Group>(null);
-  
-  // Load the GLTF model with Draco support and error handling.
-  const { scene } = useGLTF('/bawomataluo_omo_sebua-v1.glb', 'https://www.gstatic.com/draco/versioned/decoders/1.5.5/', undefined, (error) => {
-    console.error('Error loading 3D model:', error);
-  });
+// --- Procedural 3D Nias House ---
 
-  // Auto-centering and scaling logic
-  useEffect(() => {
-    if (scene) {
-      // Reset rotation/scale first for accurate bounding box
-      scene.rotation.set(0, 0, 0);
-      scene.scale.set(1, 1, 1);
-      
-      const box = new THREE.Box3().setFromObject(scene);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-      
-      // Center the model
-      scene.position.x += (scene.position.x - center.x);
-      scene.position.y += (scene.position.y - center.y);
-      scene.position.z += (scene.position.z - center.z);
+// Colors & Materials moved outside to avoid re-creation on every render
+const woodMaterial = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.8 });
+const darkWoodMaterial = new THREE.MeshStandardMaterial({ color: '#3e2723', roughness: 0.9 });
+const stoneMaterial = new THREE.MeshStandardMaterial({ color: '#757575', roughness: 0.6 });
+const roofMaterial = new THREE.MeshStandardMaterial({ color: '#4e342e', roughness: 1 });
 
-      // Adjust scale to fit a standard unit (e.g., 5 units wide)
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 5 / maxDim;
-      scene.scale.setScalar(scale);
-    }
-  }, [scene]);
+function ProceduralNiasHouse({ isShaking, simulationResult }: { isShaking?: boolean, simulationResult?: 'steady' | 'collapsed' | null }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const houseRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
-    if (!meshRef.current) return;
+    if (!groupRef.current) return;
 
     if (isShaking) {
-      meshRef.current.position.x = Math.sin(state.clock.elapsedTime * 60) * 0.1;
-      meshRef.current.position.z = Math.cos(state.clock.elapsedTime * 60) * 0.1;
+      const shakeIntensity = 0.15;
+      const speed = 50;
+      groupRef.current.position.x = Math.sin(state.clock.elapsedTime * speed) * shakeIntensity;
+      groupRef.current.position.z = Math.cos(state.clock.elapsedTime * speed * 0.9) * shakeIntensity;
+      
+      // Horizontal torsion
+      groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * speed * 0.5) * 0.02;
     } else {
-      meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, 0, 0.1);
-      meshRef.current.position.z = THREE.MathUtils.lerp(meshRef.current.position.z, 0, 0.1);
+      groupRef.current.position.x = THREE.MathUtils.lerp(groupRef.current.position.x, 0, 0.1);
+      groupRef.current.position.z = THREE.MathUtils.lerp(groupRef.current.position.z, 0, 0.1);
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, 0, 0.1);
     }
 
     if (simulationResult === 'collapsed') {
-      meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, Math.PI * 0.1, 0.1);
-      meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, -3.5, 0.1);
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -Math.PI * 0.1, 0.05);
+      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, -1.5, 0.05);
     } else {
-      meshRef.current.rotation.x = THREE.MathUtils.lerp(meshRef.current.rotation.x, 0, 0.1);
-      meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, -2.5, 0.1);
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, 0.1);
+      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, 0, 0.1);
     }
   });
 
   return (
-    <primitive 
-      ref={meshRef} 
-      object={scene} 
-      scale={5.5} 
-      position={[0, -2.5, 0]} 
-      dispose={null}
-    />
+    <group ref={groupRef}>
+      {/* Foundation Stones (Batu Umpak) */}
+      <group position={[0, -2, 0]}>
+        {[-2, 0, 2].map((x) => 
+          [-1.5, 1.5].map((z) => (
+            <mesh key={`${x}-${z}`} position={[x, 0.1, z]} material={stoneMaterial} receiveShadow castShadow>
+              <boxGeometry args={[0.8, 0.2, 0.8]} />
+            </mesh>
+          ))
+        )}
+      </group>
+
+      {/* Main Structure Group */}
+      <group ref={houseRef} position={[0, -2, 0]}>
+        {/* Main Pillars */}
+        {[-1.8, 1.8].map((x) => 
+          [-1.2, 1.2].map((z) => (
+            <mesh key={`p-${x}-${z}`} position={[x, 1.2, z]} material={woodMaterial} castShadow>
+              <cylinderGeometry args={[0.1, 0.12, 2.4]} />
+            </mesh>
+          ))
+        )}
+
+        {/* Diwa (X-Pillars for stability) */}
+        <group position={[0, 1.2, 0]}>
+          <mesh rotation={[0, 0, Math.PI * 0.2]} material={woodMaterial} castShadow>
+            <boxGeometry args={[0.08, 3.2, 0.08]} />
+          </mesh>
+          <mesh rotation={[0, 0, -Math.PI * 0.2]} material={woodMaterial} castShadow>
+            <boxGeometry args={[0.08, 3.2, 0.08]} />
+          </mesh>
+        </group>
+
+        {/* House Body */}
+        <mesh position={[0, 2.8, 0]} material={darkWoodMaterial} castShadow receiveShadow>
+          <boxGeometry args={[4.5, 1.2, 3]} />
+        </mesh>
+
+        {/* Massive Roof (Characteristic of Omo Hada) */}
+        <mesh position={[0, 4.8, 0]} material={roofMaterial} castShadow rotation={[0, Math.PI * 0.25, 0]}>
+          <coneGeometry args={[4.2, 3.8, 4]} />
+        </mesh>
+        
+        {/* Roof Extensions (Ornaments / Ni'o Goli style) */}
+        <mesh position={[0, 4.2, 1.6]} rotation={[Math.PI * 0.15, 0, 0]} material={darkWoodMaterial} castShadow>
+           <boxGeometry args={[5, 0.15, 1.2]} />
+        </mesh>
+        <mesh position={[0, 4.2, -1.6]} rotation={[-Math.PI * 0.15, 0, 0]} material={darkWoodMaterial} castShadow>
+           <boxGeometry args={[5, 0.15, 1.2]} />
+        </mesh>
+
+        {/* Decorative Front Door Area */}
+        <mesh position={[0, 2.8, 1.51]} material={woodMaterial}>
+          <boxGeometry args={[0.6, 0.8, 0.1]} />
+        </mesh>
+      </group>
+    </group>
   );
 }
 
-// Preload for better experience
-useGLTF.preload('/bawomataluo_omo_sebua-v1.glb', 'https://www.gstatic.com/draco/versioned/decoders/1.5.5/');
-
 function Loader() {
-  const { progress } = useProgress();
   return (
-    <Html center>
-      <div className="flex flex-col items-center justify-center">
-        <div className="w-8 h-8 border-2 border-nias-gold border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-stone-900 font-black text-[9px] uppercase tracking-[0.2em] whitespace-nowrap mb-1">
-          MEMUAT STRUKTUR...
-        </p>
-        <p className="text-nias-gold font-bold text-[10px] tabular-nums">
-          {progress.toFixed(0)}%
-        </p>
+    <div className="absolute inset-0 flex items-center justify-center bg-stone-100/50 backdrop-blur-sm z-10">
+      <div className="flex flex-col items-center">
+        <RefreshCcw className="text-nias-gold animate-spin mb-2" size={24} />
+        <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Membangun Struktur...</span>
       </div>
-    </Html>
+    </div>
   );
 }
 
 function House3DViewer({ isShaking, simulationResult }: { isShaking?: boolean, simulationResult?: 'steady' | 'collapsed' | null }) {
   return (
     <div className="w-full h-full bg-stone-100 rounded-3xl overflow-hidden relative shadow-inner">
-      <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-stone-200 text-stone-500 shadow-sm">
+      <div className="absolute top-4 left-4 z-30 flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-stone-200 text-stone-500 shadow-sm pointer-events-none">
         <Rotate3d size={16} />
         <span className="text-[10px] font-bold uppercase tracking-wider">Model 3D Interaktif</span>
       </div>
       
-      <ErrorBoundary>
-        <Canvas 
-          shadows 
-          dpr={[1, 2]}
-          gl={{ 
-            antialias: true, 
-            alpha: true,
-            powerPreference: "high-performance",
-            toneMappingExposure: 1.8
-          }}
-          className="touch-none"
-        >
-          <PerspectiveCamera makeDefault position={[8, 5, 8]} fov={35} />
-          
-          {/* Pencahayaan Sangat Terang */}
-          <ambientLight intensity={4.5} />
-          <directionalLight position={[10, 20, 10]} intensity={5.5} castShadow />
-          <directionalLight position={[-10, 15, -10]} intensity={3.5} />
-          <pointLight position={[0, -10, 0]} intensity={2.5} color="#fff1cc" />
-          <Environment preset="apartment" />
-          
-          <Suspense fallback={<Loader />}>
-            <OmoHadaModel isShaking={isShaking} simulationResult={simulationResult} />
-            <ContactShadows position={[0, -2.8, 0]} opacity={0.6} scale={15} blur={2.5} far={4} />
-          </Suspense>
-  
-          <OrbitControls 
-            enablePan={false} 
-            enableZoom={true}
-            minDistance={4} 
-            maxDistance={12}
-            enableDamping={true}
-            dampingFactor={0.1}
+      <Canvas 
+        shadows 
+        dpr={[1, 2]} 
+        className="w-full h-full"
+        gl={{ antialias: true }}
+      >
+        <PerspectiveCamera makeDefault position={[10, 6, 12]} fov={35} />
+        <OrbitControls 
+          enablePan={false} 
+          minDistance={8} 
+          maxDistance={25} 
+          autoRotate={!isShaking && !simulationResult}
+          autoRotateSpeed={0.5}
+        />
+        
+        {/* Environment & Lighting */}
+        <ambientLight intensity={1.5} />
+        <directionalLight 
+          position={[10, 20, 10]} 
+          intensity={2.5} 
+          castShadow 
+          shadow-mapSize={[1024, 1024]}
+        />
+        <pointLight position={[-10, 5, -10]} intensity={1} color="#ffe0b2" />
+        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+        <Environment preset="park" />
+        
+        <Suspense fallback={null}>
+          <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
+            <ProceduralNiasHouse isShaking={isShaking} simulationResult={simulationResult} />
+          </Float>
+          <ContactShadows 
+            position={[0, -2, 0]} 
+            opacity={0.4} 
+            scale={20} 
+            blur={2} 
+            far={4.5} 
           />
-        </Canvas>
-      </ErrorBoundary>
+        </Suspense>
+      </Canvas>
+
+      {isShaking && (
+        <div className="absolute inset-0 bg-brick-red/5 pointer-events-none animate-pulse z-20" />
+      )}
+      
+      {!isShaking && simulationResult !== 'collapsed' && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-stone-900/60 backdrop-blur-sm rounded-full pointer-events-none">
+          <p className="text-white text-[9px] font-bold uppercase tracking-widest text-center">
+            Gunakan Jari untuk Mengeksplorasi
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -454,20 +455,14 @@ function MindfulPage({ onNext }: { onNext: () => void }) {
         <h1 className="text-3xl font-black text-stone-900 tracking-tighter leading-none uppercase italic">Maret 2005,<br />Nias Berguncang</h1>
       </header>
 
-      <div className="relative aspect-video bg-stone-900 rounded-[32px] overflow-hidden group shadow-2xl border-4 border-white">
-        <div className="absolute inset-0 flex items-center justify-center bg-brick-red/20 group-hover:bg-brick-red/30 transition-colors z-10">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-brick-red shadow-2xl transform group-hover:scale-110 transition-transform">
-            <Play fill="currentColor" className="ml-1" />
-          </div>
-        </div>
-        <img 
-          src="https://images.unsplash.com/photo-1547841022-b558accc7ef8?q=80&w=1000&auto=format&fit=crop" 
-          alt="History of Nias" 
-          className="w-full h-full object-cover opacity-50 contrast-125 grayscale"
-        />
-        <div className="absolute bottom-4 left-4 right-4 text-white text-[10px] font-black uppercase tracking-widest bg-black/40 p-2 rounded-xl backdrop-blur-sm z-20">
-          Dokumentasi Gempa Nias 2005
-        </div>
+      <div className="relative aspect-video bg-stone-900 rounded-[32px] overflow-hidden shadow-2xl border-4 border-white">
+        <iframe 
+          className="w-full h-full"
+          src="https://www.youtube.com/embed/9xHnjrmA6No"
+          title="Nias Earthquake Documentary"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        ></iframe>
       </div>
 
       <div className="space-y-4 text-stone-800 leading-relaxed text-sm font-medium">
@@ -765,6 +760,20 @@ function JoyfulPage({ isShaking, setIsShaking }: { isShaking: boolean, setIsShak
     return (saved === 'steady' || saved === 'collapsed') ? saved : null;
   });
 
+  // Pre-load audio elements
+  const audioRefs = useRef({
+    earthquake: new Audio('https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3'),
+    success: new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3'),
+    failure: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3')
+  });
+
+  useEffect(() => {
+    // Set volumes
+    audioRefs.current.earthquake.volume = 0.5;
+    audioRefs.current.success.volume = 0.5;
+    audioRefs.current.failure.volume = 0.5;
+  }, []);
+
   useEffect(() => { localStorage.setItem('nias_joyful_pondasi', pondasi); }, [pondasi]);
   useEffect(() => { localStorage.setItem('nias_joyful_sambungan', sambungan); }, [sambungan]);
   useEffect(() => { localStorage.setItem('nias_joyful_result', simulationResult || ''); }, [simulationResult]);
@@ -772,27 +781,26 @@ function JoyfulPage({ isShaking, setIsShaking }: { isShaking: boolean, setIsShak
   const handleSimulate = () => {
     if (!pondasi || !sambungan) return;
 
-    // Sound effects
-    const earthquakeSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2567/2567-preview.mp3');
-    const successSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
-    const failureSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+    const { earthquake, success, failure } = audioRefs.current;
     
-    earthquakeSound.volume = 0.5;
-    earthquakeSound.play().catch(() => {});
+    earthquake.currentTime = 0;
+    earthquake.play().catch(() => {});
 
     setSimulationResult(null);
     setIsShaking(true);
     setTimeout(() => {
       setIsShaking(false);
-      earthquakeSound.pause();
-      earthquakeSound.currentTime = 0;
+      earthquake.pause();
+      earthquake.currentTime = 0;
 
       if (pondasi === 'umpak' && sambungan === 'pasak') {
         setSimulationResult('steady');
-        successSound.play().catch(() => {});
+        success.currentTime = 0;
+        success.play().catch(() => {});
       } else {
         setSimulationResult('collapsed');
-        failureSound.play().catch(() => {});
+        failure.currentTime = 0;
+        failure.play().catch(() => {});
       }
     }, 3000);
   };
@@ -1043,6 +1051,7 @@ function MitigasiPage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [isFinished, setIsFinished] = useState(false);
+  const [isBadgeClaimed, setIsBadgeClaimed] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -1196,11 +1205,23 @@ function MitigasiPage() {
             <h3 className="text-2xl font-black text-stone-900 uppercase italic tracking-tighter">Ahli Mitigasi!</h3>
             <p className="text-stone-900 font-bold text-xs leading-relaxed uppercase tracking-widest opacity-90">Kamu layak mendapatkan lencana kesiapsiagaan.</p>
             <button 
-              onClick={() => alert("Lencana Kesiapsiagaan Nias Berhasil Diklaim! 🏅")}
-              className="w-full py-4 bg-brick-red text-white rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-transform border-b-4 border-red-900"
+              onClick={() => setIsBadgeClaimed(true)}
+              disabled={isBadgeClaimed}
+              className={`w-full py-4 rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-transform border-b-4 ${
+                isBadgeClaimed ? 'bg-green-600 text-white border-green-900' : 'bg-brick-red text-white border-red-900'
+              }`}
             >
-              KLAIM LENCANA SAYA
+              {isBadgeClaimed ? 'LENCANA BERHASIL DIKLAIM! 🏅' : 'KLAIM LENCANA SAYA'}
             </button>
+            {isBadgeClaimed && (
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-stone-900 font-bold text-[10px] uppercase tracking-widest bg-white/40 p-2 rounded-xl"
+              >
+                Lencana disimpan di profil Anda.
+              </motion.p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
