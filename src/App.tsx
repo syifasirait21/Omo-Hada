@@ -61,60 +61,82 @@ import { CSS } from '@dnd-kit/utilities';
 
 function NiasAtmosphere() {
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 select-none">
-      <div className="absolute top-0 left-0 w-full h-full opacity-[0.04]">
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 select-none">
+      {/* Repeating Nias Geometric Pattern Layer */}
+      <div className="absolute inset-0 opacity-[0.02]" 
+           style={{ 
+             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30-30-30z' fill='%23000' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+             backgroundSize: '40px 40px'
+           }} 
+      />
+
+      <div className="absolute top-0 left-0 w-full h-full">
         {/* Animated Spirals (Ni'o Goli) */}
-        {[...Array(6)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <motion.div
-            key={i}
+            key={`niogoli-${i}`}
             initial={{ 
               x: Math.random() * 100 + "%", 
               y: Math.random() * 100 + "%",
-              opacity: 0 
+              opacity: 0,
+              scale: 0.5 + Math.random()
             }}
             animate={{ 
               y: ["0%", "100%"],
-              opacity: [0, 1, 0],
+              opacity: [0, 0.05, 0],
               rotate: [0, 360]
             }}
             transition={{
-              duration: 15 + Math.random() * 10,
+              duration: 25 + Math.random() * 15,
               repeat: Infinity,
-              delay: i * 2,
+              delay: i * 2.5,
               ease: "linear"
             }}
             className="absolute"
           >
-            <svg width="120" height="120" viewBox="0 0 100 100" className="text-stone-900 fill-none stroke-current stroke-3">
+            <svg width="100" height="100" viewBox="0 0 100 100" className="text-stone-900 fill-none stroke-current stroke-[1.5]">
               <path d="M50 50 C 50 20, 80 20, 80 50 C 80 80, 20 80, 20 50 C 20 20, 60 20, 60 50 C 60 70, 40 70, 40 50" />
             </svg>
           </motion.div>
         ))}
         
-        {/* Floating Geometric Shapes */}
-        {[...Array(8)].map((_, i) => (
+        {/* Ni'o Talingawö Symbols (Earrings) */}
+        {[...Array(5)].map((_, i) => (
           <motion.div
-            key={`geo-${i}`}
+            key={`talinga-${i}`}
+            initial={{ 
+              x: Math.random() * 100 + "%", 
+              y: Math.random() * 100 + "%",
+              opacity: 0
+            }}
             animate={{ 
-              x: ["-10%", "110%"],
-              rotate: [0, 45, 0]
+              opacity: [0, 0.04, 0],
+              scale: [0.8, 1.1, 0.8]
             }}
             transition={{
-              duration: 20 + Math.random() * 15,
+              duration: 15,
               repeat: Infinity,
-              delay: i * 3,
+              delay: i * 4,
               ease: "easeInOut"
             }}
-            className="absolute top-1/4 opacity-30"
-            style={{ top: (i * 12) + "%" }}
+            className="absolute"
           >
-            <div className="w-8 h-8 border-2 border-stone-800 rotate-45" />
+            <svg width="80" height="80" viewBox="0 0 100 100" className="text-stone-900 fill-current">
+              <path d="M50 10 C 30 10, 15 25, 15 45 C 15 65, 30 85, 50 90 C 70 85, 85 65, 85 45 C 85 25, 70 10, 50 10 M50 25 C 60 25, 70 35, 70 45 C 70 55, 60 65, 50 65 C 40 65, 30 55, 30 45 C 30 35, 40 25, 50 25 Z" />
+            </svg>
           </motion.div>
         ))}
+
+        {/* Floating Large Omo Hada Silhouettes */}
+        <div className="absolute bottom-0 left-0 w-full h-1/2 opacity-[0.012] pointer-events-none">
+           <svg width="100%" height="100%" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice" className="fill-stone-900">
+             <path d="M50 180 L50 140 L30 140 L100 60 L170 140 L150 140 L150 180 Z M250 180 L250 150 L230 150 L300 80 L370 150 L350 150 L350 180 Z" />
+           </svg>
+        </div>
       </div>
       
       {/* Texture Overlay */}
-      <div className="absolute inset-0 opacity-[0.15] mix-blend-multiply" 
+      <div className="absolute inset-0 opacity-[0.06] mix-blend-multiply" 
            style={{ backgroundImage: `url("https://www.transparenttextures.com/patterns/natural-paper.png")` }} />
     </div>
   );
@@ -133,7 +155,10 @@ const roofMaterial = new THREE.MeshStandardMaterial({ color: '#4e342e', roughnes
 
 function ProceduralNiasHouse({ isShaking, simulationResult }: { isShaking?: boolean, simulationResult?: 'steady' | 'collapsed' | null }) {
   const groupRef = useRef<THREE.Group>(null);
-  const houseRef = useRef<THREE.Group>(null);
+  const roofRef = useRef<THREE.Group>(null);
+  const bodyRef = useRef<THREE.Group>(null);
+  const pillarsRef = useRef<THREE.Group>(null);
+  const xPillarsRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
     if (!groupRef.current) return;
@@ -153,17 +178,71 @@ function ProceduralNiasHouse({ isShaking, simulationResult }: { isShaking?: bool
     }
 
     if (simulationResult === 'collapsed') {
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -Math.PI * 0.1, 0.05);
-      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, -1.5, 0.05);
+      // DRAMATIC COLLAPSE - Parts fall and tilt independently in a chaotic manner
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, -Math.PI * 0.15, 0.02);
+      
+      if (roofRef.current) {
+        // Roof slides and tilts heavily
+        roofRef.current.position.y = THREE.MathUtils.lerp(roofRef.current.position.y, -1.8, 0.04);
+        roofRef.current.position.z = THREE.MathUtils.lerp(roofRef.current.position.z, 2.5, 0.035);
+        roofRef.current.rotation.x = THREE.MathUtils.lerp(roofRef.current.rotation.x, Math.PI * 0.4, 0.04);
+        roofRef.current.rotation.z = THREE.MathUtils.lerp(roofRef.current.rotation.z, -Math.PI * 0.25, 0.03);
+      }
+      
+      if (bodyRef.current) {
+        // Body collapses and pan-cakes
+        bodyRef.current.position.y = THREE.MathUtils.lerp(bodyRef.current.position.y, -2.5, 0.06);
+        bodyRef.current.rotation.x = THREE.MathUtils.lerp(bodyRef.current.rotation.x, -Math.PI * 0.2, 0.05);
+        bodyRef.current.rotation.y = THREE.MathUtils.lerp(bodyRef.current.rotation.y, Math.PI * 0.15, 0.03);
+        bodyRef.current.scale.y = THREE.MathUtils.lerp(bodyRef.current.scale.y, 0.4, 0.05);
+      }
+      
+      if (pillarsRef.current) {
+        // Pillars fall apart
+        pillarsRef.current.position.y = THREE.MathUtils.lerp(pillarsRef.current.position.y, -3.2, 0.04);
+        pillarsRef.current.rotation.z = THREE.MathUtils.lerp(pillarsRef.current.rotation.z, Math.PI * 0.6, 0.05);
+        pillarsRef.current.rotation.x = THREE.MathUtils.lerp(pillarsRef.current.rotation.x, Math.PI * 0.1, 0.04);
+      }
+
+      if (xPillarsRef.current) {
+        xPillarsRef.current.position.y = THREE.MathUtils.lerp(xPillarsRef.current.position.y, -2.8, 0.08);
+        xPillarsRef.current.rotation.x = THREE.MathUtils.lerp(xPillarsRef.current.rotation.x, -Math.PI * 0.5, 0.05);
+      }
     } else {
+      // RESET TO STEADY
       groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, 0, 0.1);
       groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, 0, 0.1);
+
+      if (roofRef.current) {
+        roofRef.current.position.y = THREE.MathUtils.lerp(roofRef.current.position.y, 1.4, 0.1);
+        roofRef.current.position.z = THREE.MathUtils.lerp(roofRef.current.position.z, 0, 0.1);
+        roofRef.current.rotation.x = THREE.MathUtils.lerp(roofRef.current.rotation.x, 0, 0.1);
+        roofRef.current.rotation.z = THREE.MathUtils.lerp(roofRef.current.rotation.z, 0, 0.1);
+      }
+      
+      if (bodyRef.current) {
+        bodyRef.current.position.y = THREE.MathUtils.lerp(bodyRef.current.position.y, 0.8, 0.1);
+        bodyRef.current.rotation.x = THREE.MathUtils.lerp(bodyRef.current.rotation.x, 0, 0.1);
+        bodyRef.current.rotation.y = THREE.MathUtils.lerp(bodyRef.current.rotation.y, 0, 0.1);
+        bodyRef.current.scale.y = THREE.MathUtils.lerp(bodyRef.current.scale.y, 1, 0.1);
+      }
+      
+      if (pillarsRef.current) {
+        pillarsRef.current.position.y = THREE.MathUtils.lerp(pillarsRef.current.position.y, -0.8, 0.1);
+        pillarsRef.current.rotation.z = THREE.MathUtils.lerp(pillarsRef.current.rotation.z, 0, 0.1);
+        pillarsRef.current.rotation.x = THREE.MathUtils.lerp(pillarsRef.current.rotation.x, 0, 0.1);
+      }
+
+      if (xPillarsRef.current) {
+        xPillarsRef.current.position.y = THREE.MathUtils.lerp(xPillarsRef.current.position.y, -0.8, 0.1);
+        xPillarsRef.current.rotation.x = THREE.MathUtils.lerp(xPillarsRef.current.rotation.x, 0, 0.1);
+      }
     }
   });
 
   return (
     <group ref={groupRef}>
-      {/* Foundation Stones (Batu Umpak) */}
+      {/* Foundation Stones (Batu Umpak) - Stay put */}
       <group position={[0, -2, 0]}>
         {[-2, 0, 2].map((x) => 
           [-1.5, 1.5].map((z) => (
@@ -174,48 +253,50 @@ function ProceduralNiasHouse({ isShaking, simulationResult }: { isShaking?: bool
         )}
       </group>
 
-      {/* Main Structure Group */}
-      <group ref={houseRef} position={[0, -2, 0]}>
-        {/* Main Pillars */}
+      {/* Pillars Group */}
+      <group ref={pillarsRef} position={[0, -0.8, 0]}>
         {[-1.8, 1.8].map((x) => 
           [-1.2, 1.2].map((z) => (
-            <mesh key={`p-${x}-${z}`} position={[x, 1.2, z]} material={woodMaterial} castShadow>
+            <mesh key={`p-${x}-${z}`} position={[x, 0, z]} material={woodMaterial} castShadow>
               <cylinderGeometry args={[0.1, 0.12, 2.4]} />
             </mesh>
           ))
         )}
+      </group>
 
-        {/* Diwa (X-Pillars for stability) */}
-        <group position={[0, 1.2, 0]}>
-          <mesh rotation={[0, 0, Math.PI * 0.2]} material={woodMaterial} castShadow>
-            <boxGeometry args={[0.08, 3.2, 0.08]} />
-          </mesh>
-          <mesh rotation={[0, 0, -Math.PI * 0.2]} material={woodMaterial} castShadow>
-            <boxGeometry args={[0.08, 3.2, 0.08]} />
-          </mesh>
-        </group>
+      {/* Diwa (X-Pillars for stability) */}
+      <group ref={xPillarsRef} position={[0, -0.8, 0]}>
+        <mesh rotation={[0, 0, Math.PI * 0.2]} material={woodMaterial} castShadow>
+          <boxGeometry args={[0.08, 3.2, 0.08]} />
+        </mesh>
+        <mesh rotation={[0, 0, -Math.PI * 0.2]} material={woodMaterial} castShadow>
+          <boxGeometry args={[0.08, 3.2, 0.08]} />
+        </mesh>
+      </group>
 
-        {/* House Body */}
-        <mesh position={[0, 2.8, 0]} material={darkWoodMaterial} castShadow receiveShadow>
+      {/* House Body */}
+      <group ref={bodyRef} position={[0, 0.8, 0]}>
+        <mesh material={darkWoodMaterial} castShadow receiveShadow>
           <boxGeometry args={[4.5, 1.2, 3]} />
         </mesh>
+        {/* Decorative Front Door */}
+        <mesh position={[0, 0, 1.51]} material={woodMaterial}>
+          <boxGeometry args={[0.6, 0.8, 0.1]} />
+        </mesh>
+      </group>
 
-        {/* Massive Roof (Characteristic of Omo Hada) */}
-        <mesh position={[0, 4.8, 0]} material={roofMaterial} castShadow rotation={[0, Math.PI * 0.25, 0]}>
+      {/* Massive Roof Group */}
+      <group ref={roofRef} position={[0, 1.4, 0]}>
+        <mesh position={[0, 1.9, 0]} material={roofMaterial} castShadow rotation={[0, Math.PI * 0.25, 0]}>
           <coneGeometry args={[4.2, 3.8, 4]} />
         </mesh>
         
         {/* Roof Extensions (Ornaments / Ni'o Goli style) */}
-        <mesh position={[0, 4.2, 1.6]} rotation={[Math.PI * 0.15, 0, 0]} material={darkWoodMaterial} castShadow>
+        <mesh position={[0, 1.3, 1.6]} rotation={[Math.PI * 0.15, 0, 0]} material={darkWoodMaterial} castShadow>
            <boxGeometry args={[5, 0.15, 1.2]} />
         </mesh>
-        <mesh position={[0, 4.2, -1.6]} rotation={[-Math.PI * 0.15, 0, 0]} material={darkWoodMaterial} castShadow>
+        <mesh position={[0, 1.3, -1.6]} rotation={[-Math.PI * 0.15, 0, 0]} material={darkWoodMaterial} castShadow>
            <boxGeometry args={[5, 0.15, 1.2]} />
-        </mesh>
-
-        {/* Decorative Front Door Area */}
-        <mesh position={[0, 2.8, 1.51]} material={woodMaterial}>
-          <boxGeometry args={[0.6, 0.8, 0.1]} />
         </mesh>
       </group>
     </group>
@@ -233,9 +314,9 @@ function Loader() {
   );
 }
 
-function House3DViewer({ isShaking, simulationResult, className }: { isShaking?: boolean, simulationResult?: 'steady' | 'collapsed' | null, className?: string }) {
+function House3DViewer({ isShaking, simulationResult }: { isShaking?: boolean, simulationResult?: 'steady' | 'collapsed' | null }) {
   return (
-    <div className={`w-full h-full bg-stone-100 rounded-[32px] overflow-hidden relative shadow-inner ${className}`}>
+    <div className="w-full h-full bg-stone-100 rounded-3xl overflow-hidden relative shadow-inner">
       <div className="absolute top-4 left-4 z-30 flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-stone-200 text-stone-500 shadow-sm pointer-events-none">
         <Rotate3d size={16} />
         <span className="text-[10px] font-bold uppercase tracking-wider">Model 3D Interaktif</span>
@@ -244,34 +325,38 @@ function House3DViewer({ isShaking, simulationResult, className }: { isShaking?:
       <Canvas 
         shadows 
         dpr={[1, 2]} 
-        className="w-full h-full touch-none"
-        gl={{ antialias: true, alpha: true }}
+        className="w-full h-full"
+        gl={{ antialias: true }}
       >
-        <PerspectiveCamera makeDefault position={[12, 8, 12]} fov={35} />
+        <PerspectiveCamera makeDefault position={[10, 6, 12]} fov={35} />
         <OrbitControls 
           enablePan={false} 
           minDistance={8} 
-          maxDistance={30} 
+          maxDistance={25} 
           autoRotate={!isShaking && !simulationResult}
           autoRotateSpeed={0.5}
-          makeDefault
         />
         
         {/* Environment & Lighting */}
         <ambientLight intensity={1.5} />
-        <spotLight position={[10, 15, 10]} angle={0.3} penumbra={1} castShadow intensity={2} />
+        <directionalLight 
+          position={[10, 20, 10]} 
+          intensity={2.5} 
+          castShadow 
+          shadow-mapSize={[1024, 1024]}
+        />
         <pointLight position={[-10, 5, -10]} intensity={1} color="#ffe0b2" />
-        <Environment preset="city" />
+        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
         
         <Suspense fallback={null}>
-          <Float speed={1.5} rotationIntensity={0.1} floatIntensity={0.2}>
+          <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
             <ProceduralNiasHouse isShaking={isShaking} simulationResult={simulationResult} />
           </Float>
           <ContactShadows 
-            position={[0, -2.1, 0]} 
+            position={[0, -2, 0]} 
             opacity={0.4} 
             scale={20} 
-            blur={2.4} 
+            blur={2} 
             far={4.5} 
           />
         </Suspense>
@@ -296,7 +381,175 @@ function House3DViewer({ isShaking, simulationResult, className }: { isShaking?:
 
 type Page = 'dashboard' | 'mindful' | 'meaningful' | 'joyful' | 'mitigasi';
 
+function SplashScreen({ onComplete }: { onComplete: () => void }) {
+  const [step, setStep] = useState(0);
+  
+  const steps = [
+    {
+      title: "Nias, Maret 2005",
+      desc: "Gempa dahsyat melanda. Banyak bangunan hancur rata dengan tanah.",
+      image: "/Splash1.png", 
+      fallback: "https://images.unsplash.com/photo-1547841022-b558accc7ef8?auto=format&fit=crop&q=80&w=800"
+    },
+    {
+      title: "Omo Hada, Tetap Tegak!",
+      desc: "Namun, rumah adat Omo Hada justru tetap kokoh berdiri tanpa kerusakan berarti.",
+      image: "/splash2.png",
+      fallback: "https://images.unsplash.com/photo-1596422846543-75c6fc18a5ce?auto=format&fit=crop&q=80&w=800",
+    },
+    {
+      title: "Apa Rahasianya?",
+      desc: "Mari selidiki bagaimana kearifan lokal leluhur Nias bisa menaklukkan kekuatan gempa bumi!",
+      image: "/splash3.png",
+      fallback: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=800",
+    }
+  ];
+
+  return (
+    <motion.div 
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-[100] bg-[#dfc9b0] flex flex-col items-center overflow-hidden"
+    >
+      {/* Nias Pattern for Splash Background */}
+      <div className="absolute inset-0 opacity-[0.02] pointer-events-none" 
+           style={{ 
+             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 30-30 30-30-30z' fill='%23000' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+             backgroundSize: '30px 30px'
+           }} 
+      />
+
+      {/* --- Persistent Background Elements --- */}
+      {/* Header Pill */}
+      <motion.div 
+        initial={{ y: -30, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="absolute top-5 left-1/2 -translate-x-1/2 bg-white rounded-full w-[200px] h-[46px] flex items-center justify-center gap-3 shadow-xl border-2 border-white/80 z-50"
+      >
+        <div className="w-8 h-8 flex items-center justify-center shrink-0">
+          <img 
+            src="/Lambang_Universitas_Negeri_Medan.png" 
+            alt="UNIMED" 
+            className="w-full h-full object-contain"
+          />
+        </div>
+        <div className="text-left">
+          <p className="text-[10px] font-black leading-none text-stone-900 uppercase tracking-tighter">ILMU PENGETAHUAN ALAM</p>
+          <p className="text-[8px] font-bold text-stone-500 uppercase tracking-tight mt-0.5">UNIVERSITAS NEGERI MEDAN</p>
+        </div>
+      </motion.div>
+
+      {/* Decorative Clouds */}
+      <motion.div 
+        animate={{ x: [-10, 10] }}
+        transition={{ duration: 4, repeat: Infinity, repeatType: 'reverse', ease: "easeInOut" }}
+        className="absolute top-24 -right-10 opacity-60 z-10"
+      >
+        <svg width="140" height="80" viewBox="0 0 120 70" fill="white">
+          <path d="M30 60c-12 0-22-8-22-20s10-20 22-20c4-8 12-12 20-12s16 4 20 12c8-4 20-4 28 8 8 12 4 32-16 32H30z" />
+        </svg>
+      </motion.div>
+      <motion.div 
+        animate={{ x: [10, -10] }}
+        transition={{ duration: 5, repeat: Infinity, repeatType: 'reverse', ease: "easeInOut" }}
+        className="absolute top-[45%] -left-12 opacity-50 z-10"
+      >
+        <svg width="120" height="70" viewBox="0 0 100 60" fill="white">
+          <path d="M25 50c-10 0-18-6-18-16s8-16 18-16c3-6 10-10 16-10s13 4 16 10c6-3 16-3 22 6 6 9 3 26-12 26H25z" />
+        </svg>
+      </motion.div>
+
+      {/* --- Main Content (Animated) --- */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          className="relative w-full h-full flex flex-col items-center"
+        >
+          {/* Text Content */}
+          <div className="pt-[20vh] px-8 text-center space-y-3 z-20">
+            <h1 className="text-[32px] font-black text-stone-900 tracking-tighter leading-[1.1] max-w-[300px] mx-auto">
+              {steps[step].title}
+            </h1>
+            <p className="text-stone-800/80 font-bold text-base leading-relaxed px-2 max-w-[320px] mx-auto">
+              {steps[step].desc}
+            </p>
+          </div>
+
+          {/* Illustration Section */}
+          <div className="mt-auto w-full relative">
+            <div className="w-full relative h-[60vh] flex items-end">
+              <img 
+                src={steps[step].image} 
+                onError={(e) => {
+                  if (steps[step].fallback) {
+                    (e.target as HTMLImageElement).src = steps[step].fallback!;
+                  }
+                }}
+                alt="Illustration"
+                className="w-full h-full object-cover object-bottom"
+              />
+              {/* Soft overlay to blend image with background at the top */}
+              <div className="absolute inset-0 bg-gradient-to-b from-[#dfc9b0] via-transparent to-transparent h-32 pointer-events-none" />
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* --- Fixed Controls (Non-Animated Bottom Elements) --- */}
+      {/* Pagination Dots */}
+      <div className="absolute bottom-[112px] left-1/2 -translate-x-1/2 flex gap-3 z-50">
+        {steps.map((_, i) => (
+          <motion.div 
+            key={i} 
+            animate={{ 
+              scale: step === i ? 1.2 : 1,
+              opacity: step === i ? 1 : 0.4
+            }}
+            className={`h-2.5 rounded-full shadow-sm transition-all duration-300 ${step === i ? 'w-8 bg-[#94d1f2]' : 'w-2.5 bg-white'}`} 
+          />
+        ))}
+      </div>
+
+      {/* Bottom Button Area */}
+      <div className="absolute bottom-0 w-full px-8 pb-10 z-50 flex justify-center">
+        <button
+          onClick={() => {
+            if (step < steps.length - 1) {
+              setStep(step + 1);
+            } else {
+              onComplete();
+            }
+          }}
+          className="w-[200px] h-10 bg-stone-900 text-white rounded-full font-black text-[10px] tracking-[0.2rem] shadow-2xl active:scale-[0.98] transition-all uppercase flex items-center justify-center gap-2"
+        >
+          {step === steps.length - 1 ? (
+            <>
+              Mulai Eksplorasi
+              <ChevronRight size={14} strokeWidth={3} />
+            </>
+          ) : (
+            <>
+              Lanjutkan
+              <ChevronRight size={12} strokeWidth={2.5} />
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Texture Overlay */}
+      <div className="absolute inset-0 opacity-[0.08] mix-blend-multiply pointer-events-none" 
+           style={{ backgroundImage: `url("https://www.transparenttextures.com/patterns/natural-paper.png")` }} />
+    </motion.div>
+  );
+}
+
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>(() => {
     const saved = localStorage.getItem('nias_current_page');
     // Validate that the saved value is a valid Page
@@ -322,44 +575,56 @@ export default function App() {
   ];
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto bg-cream-bg overflow-hidden border-x border-stone-200">
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-20 relative z-10">
-        <NiasAtmosphere />
-        <AnimatePresence mode="wait">
-          {currentPage === 'dashboard' && <DashboardPage key="dashboard" onSelect={(p) => setCurrentPage(p)} />}
-          {currentPage === 'mindful' && <MindfulPage key="mindful" onNext={() => setCurrentPage('meaningful')} />}
-          {currentPage === 'meaningful' && <MeaningfulPage key="meaningful" />}
-          {currentPage === 'joyful' && <JoyfulPage key="joyful" isShaking={isShaking} setIsShaking={setIsShaking} />}
-          {currentPage === 'mitigasi' && <MitigasiPage key="mitigasi" />}
-        </AnimatePresence>
-      </main>
+    <div className="flex flex-col h-screen max-w-md mx-auto bg-cream-bg overflow-hidden border-x border-stone-200 relative">
+      <AnimatePresence mode="wait">
+        {showSplash ? (
+          <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
+        ) : (
+          <motion.div 
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex-1 overflow-y-auto no-scrollbar pb-20 relative z-10"
+          >
+            <NiasAtmosphere />
+            <AnimatePresence mode="wait">
+              {currentPage === 'dashboard' && <DashboardPage key="dashboard" onSelect={(p) => setCurrentPage(p)} />}
+              {currentPage === 'mindful' && <MindfulPage key="mindful" onNext={() => setCurrentPage('meaningful')} />}
+              {currentPage === 'meaningful' && <MeaningfulPage key="meaningful" />}
+              {currentPage === 'joyful' && <JoyfulPage key="joyful" isShaking={isShaking} setIsShaking={setIsShaking} />}
+              {currentPage === 'mitigasi' && <MitigasiPage key="mitigasi" />}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Navigation */}
-      <nav className="bg-cream-bg/95 backdrop-blur-md border-t border-stone-200 h-16 flex items-center justify-around fixed bottom-0 w-full max-w-md z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentPage === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentPage(item.id as Page)}
-              className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
-                isActive ? 'text-brick-red' : 'text-stone-400'
-              }`}
-            >
-              <Icon size={20} className={isActive ? 'fill-brick-red/10' : ''} />
-              <span className="text-[10px] mt-1 font-medium">{item.label}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="nav-indicator"
-                  className="absolute bottom-0 w-8 h-1 bg-brick-red rounded-t-full"
-                />
-              )}
-            </button>
-          );
-        })}
-      </nav>
+      {!showSplash && (
+        <nav className="bg-cream-bg/95 backdrop-blur-md border-t border-stone-200 h-16 flex items-center justify-around fixed bottom-0 w-full max-w-md z-50 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentPage === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id as Page)}
+                className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
+                  isActive ? 'text-brick-red' : 'text-stone-400'
+                }`}
+              >
+                <Icon size={20} className={isActive ? 'fill-brick-red/10' : ''} />
+                <span className="text-[10px] mt-1 font-medium">{item.label}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="nav-indicator"
+                    className="absolute bottom-0 w-8 h-1 bg-brick-red rounded-t-full"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }
@@ -449,14 +714,20 @@ function DashboardPage({ onSelect }: { onSelect: (p: Page) => void }) {
               key={m.id}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
+              whileHover={{ 
+                y: -8, 
+                scale: 1.02,
+                transition: { type: "spring", stiffness: 400, damping: 25 }
+              }}
+              whileTap={{ scale: 0.98 }}
               transition={{ delay: idx * 0.1, type: "spring", stiffness: 300, damping: 24 }}
               onClick={() => onSelect(m.id as Page)}
-              className={`group relative flex flex-col items-start p-5 bg-white rounded-[32px] border border-stone-100 text-left overflow-hidden transition-all duration-300 active:scale-[0.97]
-                ${isLarge ? 'col-span-2 shadow-sm hover:shadow-xl' : 'col-span-1 shadow-sm hover:shadow-lg'}
+              className={`group relative flex flex-col items-start p-5 bg-white rounded-[32px] border border-stone-100 text-left overflow-hidden transition-all duration-300
+                ${isLarge ? 'col-span-2 shadow-sm hover:shadow-2xl hover:border-brick-red/20' : 'col-span-1 shadow-sm hover:shadow-xl hover:border-nias-gold/30'}
               `}
             >
               {/* Decorative Pattern Background */}
-              <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
+              <div className="absolute top-0 right-0 p-4 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity pointer-events-none z-0">
                 <Icon size={isLarge ? 120 : 60} strokeWidth={1} />
               </div>
 
@@ -602,26 +873,28 @@ function MeaningfulPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-cream-bg min-h-[600px] font-sans">
-      <header className="p-6 text-center relative border-b border-stone-200/50">
+    <div className="flex flex-col bg-cream-bg font-sans">
+      <header className="pt-4 pb-3 text-center relative border-b border-stone-200/50">
         <h2 className="text-xl font-black text-stone-900 tracking-tighter uppercase italic">
           Anatomi Omo Hada<br/>
           <span className="text-xs font-bold block text-brick-red tracking-widest">(Rahasia Struktur)</span>
         </h2>
-        <div className="absolute top-6 right-6">
-          <button onClick={playKnock} className="bg-white p-3 rounded-full shadow-lg text-brick-red active:scale-95 transition-transform border border-stone-100">
-            <Volume2 size={24} />
+        <div className="absolute top-4 right-6">
+          <button onClick={playKnock} className="bg-white p-2.5 rounded-full shadow-lg text-brick-red active:scale-95 transition-transform border border-stone-100">
+            <Volume2 size={20} />
           </button>
         </div>
       </header>
 
-      <div className="flex-1 relative flex flex-col items-center pb-8 px-6 pt-6 overflow-y-auto">
+      <div className="relative flex flex-col items-center pb-8 px-6 pt-6">
         <div className="w-full max-w-md flex flex-col gap-6">
           {/* Main 3D Viewer Area */}
-          <div className="relative w-full aspect-[4/3] bg-stone-100 rounded-[40px] overflow-hidden border-4 border-white shadow-2xl group ring-1 ring-stone-200">
-            <House3DViewer />
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full border border-stone-200 text-[10px] font-black text-stone-500 uppercase tracking-widest pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-40">
-              Geser untuk Putar
+          <div className="relative w-full aspect-[4/3] bg-stone-100 rounded-[40px] overflow-hidden border-2 border-white shadow-2xl group ring-1 ring-stone-200">
+            <Suspense fallback={<Loader />}>
+              <House3DViewer />
+            </Suspense>
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full border border-stone-200 text-[10px] font-black text-stone-500 uppercase tracking-widest pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+              Slide putar • Zoom detail
             </div>
           </div>
 
@@ -656,24 +929,24 @@ function MeaningfulPage() {
                 className="bg-white rounded-[40px] shadow-2xl relative border-2 border-stone-100 mb-8 overflow-hidden"
               >
                 {/* Tab Controller */}
-                <div className="flex p-2 bg-stone-100 m-4 rounded-[32px]">
+                <div className="flex p-1.5 bg-stone-100 mx-4 mt-4 mb-2 rounded-[32px] items-center">
                   <button 
                     onClick={() => setActiveTab('etno')}
-                    className={`flex-1 py-3.5 rounded-[28px] font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                    className={`h-[35px] w-[149px] rounded-[28px] font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                       activeTab === 'etno' ? 'bg-white text-brick-red shadow-md' : 'text-stone-400'
                     }`}
                   >
-                    <BookOpen size={16} />
+                    <BookOpen size={14} />
                     Etnosains
                   </button>
                   <button 
                     onClick={() => setActiveTab('science')}
-                    className={`flex-1 py-3.5 rounded-[28px] font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+                    className={`h-[35px] flex-1 rounded-[28px] font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                       activeTab === 'science' ? 'bg-stone-900 text-nias-gold shadow-md' : 'text-stone-400'
                     }`}
                   >
-                    <Zap size={16} />
-                    Sains Modern
+                    <Zap size={14} />
+                    Sains
                   </button>
                 </div>
 
@@ -689,11 +962,11 @@ function MeaningfulPage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-4 h-4 rounded-full bg-brick-red" />
-                          <h3 className="text-2xl font-black text-stone-900 tracking-tighter uppercase italic">{anatomyDetails[activeModal].title}</h3>
+                          <h3 className="text-[20px] font-black text-stone-900 tracking-tighter uppercase italic">{anatomyDetails[activeModal].title}</h3>
                         </div>
                         <div className="space-y-1">
                           <p className="text-brick-red font-black text-[10px] uppercase tracking-[0.2em] opacity-40">Filosofi Tradisional</p>
-                          <p className="text-stone-800 text-lg leading-snug font-bold">
+                          <p className="text-stone-800 text-[15px] text-left leading-snug font-bold">
                             {anatomyDetails[activeModal].desc}
                           </p>
                         </div>
@@ -923,12 +1196,12 @@ function JoyfulPage({ isShaking, setIsShaking }: { isShaking: boolean, setIsShak
         </div>
       </div>
 
-      <div className="relative w-full flex flex-col items-center">
-        <div className="w-full aspect-square md:aspect-video rounded-[32px] overflow-hidden border-4 border-white shadow-2xl">
+      <div className="relative w-full aspect-[4/3] flex flex-col items-center bg-stone-100 rounded-[40px] overflow-hidden border-2 border-white shadow-2xl group ring-1 ring-stone-200">
+        <Suspense fallback={<Loader />}>
           <House3DViewer isShaking={isShaking} simulationResult={simulationResult} />
-        </div>
-        <div className="w-[85%] h-6 bg-stone-200 rounded-full mt-4 shadow-inner overflow-hidden relative border-4 border-white">
-          <div className="absolute inset-0 bg-stone-400/20" />
+        </Suspense>
+        <div className="w-[85%] h-4 bg-stone-200/50 rounded-full mt-auto mb-6 shadow-inner relative border-2 border-white pointer-events-none">
+          <div className="absolute inset-0 bg-stone-400/10" />
         </div>
       </div>
 
@@ -968,7 +1241,7 @@ function JoyfulPage({ isShaking, setIsShaking }: { isShaking: boolean, setIsShak
                 </div>
                 <div className="text-left">
                   <h3 className={`text-2xl font-black italic tracking-tighter uppercase leading-none ${simulationResult === 'steady' ? 'text-green-700' : 'text-red-700'}`}>
-                    {simulationResult === 'steady' ? 'AMAN!' : 'RUNTUH!'}
+                    {simulationResult === 'steady' ? 'AMAN!' : 'HANCUR TOTAL!'}
                   </h3>
                   <p className="text-stone-600 font-bold text-[10px] uppercase tracking-wider mt-1 opacity-60">Resultat Simulasi Berakhir</p>
                 </div>
@@ -977,7 +1250,7 @@ function JoyfulPage({ isShaking, setIsShaking }: { isShaking: boolean, setIsShak
               <p className="text-stone-600 font-bold text-xs leading-relaxed text-left border-y border-stone-100 py-3 mb-4">
                 {simulationResult === 'steady' 
                   ? 'Kombinasi Etnosainsmu terbukti tangguh melindungi dari ancaman gempa.' 
-                  : 'Struktur runtuh. Kaku & rapuh menjadi penyebab utama kegagalan.'}
+                  : 'Hancur seluruhnya! Sambungan kaku dan pondasi tanam gagal menyerap energi guncangan gempa.'}
               </p>
 
               <button 
@@ -1002,7 +1275,7 @@ interface MitigationItem {
   id: string;
   text: string;
   isCorrect: boolean;
-  detail: string;
+  explanation: string;
 }
 
 function DraggableItem({ item, disabled }: { item: MitigationItem, disabled?: boolean }) {
@@ -1080,14 +1353,17 @@ function DropZone({ id, items, title, icon, color, showFeedback }: {
                   : 'border-white bg-white text-stone-800'
               }`}
             >
-              <p className="text-[10px] font-black leading-tight">{item.text}</p>
+              <p className="text-[10px] font-black leading-tight mb-1">{item.text}</p>
               {showFeedback && (
                 <motion.div 
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
-                  className="mt-1 pt-1 border-t border-current/10 text-[8px] font-bold opacity-80"
+                  className="mt-1 pt-1.5 border-t border-current/10 text-left"
                 >
-                  {item.detail}
+                  <p className="text-[8px] font-black uppercase tracking-tighter opacity-70 mb-0.5">Penjelasan:</p>
+                  <p className="text-[9px] font-bold leading-tight opacity-90">
+                    {item.explanation}
+                  </p>
                 </motion.div>
               )}
             </motion.div>
@@ -1100,12 +1376,42 @@ function DropZone({ id, items, title, icon, color, showFeedback }: {
 
 function MitigasiPage() {
   const [initialItems] = useState<MitigationItem[]>([
-    { id: '1', text: "Berlindung di bawah meja", isCorrect: true, detail: "Melindungi kepala dari reruntuhan." },
-    { id: '2', text: "Lari ke arah lift & tangga", isCorrect: false, detail: "Bahaya terjebak jika listrik mati." },
-    { id: '3', text: "Jauhi kaca & lemari besar", isCorrect: true, detail: "Menghindari pecahan kaca tajam." },
-    { id: '4', text: "Tetap di gedung beton retak", isCorrect: false, detail: "Resiko runtuh saat gempa susulan." },
-    { id: '5', text: "Gunakan tangga darurat", isCorrect: true, detail: "Akses aman saat evakuasi." },
-    { id: '6', text: "Gunakan lift saat gempa", isCorrect: false, detail: "Rawan terjebak macet/rusak." },
+    { 
+      id: '1', 
+      text: "Berlindung di bawah meja", 
+      isCorrect: true, 
+      explanation: "Meja yang kokoh melindungi kepala dan tubuh Anda dari kejatuhan benda-benda berat atau plafon yang runtuh." 
+    },
+    { 
+      id: '2', 
+      text: "Lari ke arah lift saat gempa", 
+      isCorrect: false, 
+      explanation: "Listrik bisa mati kapan saja, menyebabkan lift macet dan Anda bisa terjebak di dalamnya tanpa udara yang cukup." 
+    },
+    { 
+      id: '3', 
+      text: "Jauhi jendela kaca", 
+      isCorrect: true, 
+      explanation: "Guncangan gempa bisa memecahkan kaca jendela, yang serpihannya sangat tajam dan berbahaya bagi tubuh Anda." 
+    },
+    { 
+      id: '4', 
+      text: "Tetap di dalam gedung retak", 
+      isCorrect: false, 
+      explanation: "Gedung yang sudah retak memiliki struktur yang sudah tidak stabil dan sangat berisiko runtuh jika terjadi gempa susulan." 
+    },
+    { 
+      id: '5', 
+      text: "Gunakan tangga darurat", 
+      isCorrect: true, 
+      explanation: "Tangga darurat dirancang khusus untuk evakuasi aman dan tidak bergantung pada sistem kelistrikan gedung." 
+    },
+    { 
+      id: '6', 
+      text: "Menyalakan api/korek saat gas bocor", 
+      isCorrect: false, 
+      explanation: "Gempa sering merusak pipa gas. Api sekecil apa pun bisa memicu ledakan besar jika ada kebocoran gas di sekitar Anda." 
+    },
   ]);
 
   const [pool, setPool] = useState<MitigationItem[]>(initialItems);
