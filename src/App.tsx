@@ -1534,40 +1534,48 @@ interface MitigationItem {
   explanation: string;
 }
 
-function DraggableItem({ item, disabled }: { item: MitigationItem, disabled?: boolean }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: item.id, disabled });
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 100 : 1
-  };
-
+function MitigationItemCard({ 
+  item, 
+  onSelect 
+}: { 
+  item: MitigationItem, 
+  onSelect: (destination: 'benar' | 'salah') => void 
+}) {
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`p-3 bg-white rounded-2xl border-2 border-stone-100 shadow-sm flex items-center gap-3 transition-all hover:border-blue-200 active:scale-105 select-none ${disabled ? 'cursor-default opacity-50' : 'cursor-grab active:cursor-grabbing'}`}
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-4 bg-white rounded-3xl border-2 border-stone-100 shadow-xl flex flex-col gap-4 transition-all hover:border-blue-200 group select-none"
     >
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${disabled ? 'bg-stone-100 text-stone-300' : 'bg-blue-50 text-blue-500'}`}>
-        <Grab size={14} />
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+          <ShieldAlert size={20} />
+        </div>
+        <span className="text-xs font-black text-stone-800 leading-tight uppercase tracking-tight">{item.text}</span>
       </div>
-      <span className="text-[10px] font-black text-stone-700 leading-tight">{item.text}</span>
-    </div>
+      
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => onSelect('benar')}
+          className="flex flex-col items-center justify-center py-3 bg-green-50 hover:bg-green-100 text-green-600 rounded-2xl border-2 border-green-100 transition-all active:scale-95"
+        >
+          <CheckCircle2 size={20} className="mb-1" />
+          <span className="text-[10px] font-black uppercase tracking-tighter">Perlu Dilakukan</span>
+        </button>
+        <button
+          onClick={() => onSelect('salah')}
+          className="flex flex-col items-center justify-center py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-2xl border-2 border-red-100 transition-all active:scale-95"
+        >
+          <XCircle size={20} className="mb-1" />
+          <span className="text-[10px] font-black uppercase tracking-tighter">Harus Dihindari</span>
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
-function DropZone({ id, items, title, icon, color, showFeedback }: { 
+function ResultZone({ id, items, title, icon, color, showFeedback }: { 
   id: string, 
   items: MitigationItem[], 
   title: string, 
@@ -1575,25 +1583,22 @@ function DropZone({ id, items, title, icon, color, showFeedback }: {
   color: string,
   showFeedback: boolean
 }) {
-  const { setNodeRef, isOver } = useSortable({ id });
-
   return (
     <div className="flex-1 flex flex-col gap-3">
-      <div className={`p-4 rounded-[28px] border-4 flex items-center justify-center gap-2 shadow-sm ${color} transition-transform duration-300 ${isOver ? 'scale-105' : ''}`}>
+      <div className={`p-4 rounded-[28px] border-4 flex items-center justify-center gap-2 shadow-sm ${color} transition-transform duration-300`}>
         {icon}
         <span className="font-black italic uppercase tracking-tighter text-[10px]">{title}</span>
       </div>
       
       <div 
-        ref={setNodeRef}
-        className={`flex-1 min-h-[320px] p-2 rounded-[32px] border-4 border-dashed transition-all duration-300 flex flex-col gap-2 ${
-          isOver ? 'bg-blue-50 border-blue-400 scale-[1.02] shadow-xl' : 'bg-stone-50/50 border-stone-200'
-        } ${items.length === 0 ? 'items-center justify-center' : ''}`}
+        className={`flex-1 min-h-[320px] p-2 rounded-[32px] border-4 border-dashed transition-all duration-300 flex flex-col gap-2 bg-stone-50/50 border-stone-200 ${items.length === 0 ? 'items-center justify-center' : ''}`}
       >
         {items.length === 0 ? (
-          <div className="text-center space-y-1 opacity-20 pointer-events-none">
-            <Grab size={24} className="mx-auto mb-2" />
-            <p className="text-[8px] font-black uppercase tracking-[0.2em]">Tarik Ke Sini</p>
+          <div className="text-center space-y-1 opacity-20 pointer-events-none p-6">
+            <div className="w-12 h-12 bg-stone-200 rounded-full mx-auto mb-2 flex items-center justify-center">
+              <Check size={20} />
+            </div>
+            <p className="text-[8px] font-black uppercase tracking-[0.2em]">Belum Ada Data</p>
           </div>
         ) : (
           items.map(item => (
@@ -1674,17 +1679,11 @@ function MitigasiPage() {
   const [benar, setBenar] = useState<MitigationItem[]>([]);
   const [salah, setSalah] = useState<MitigationItem[]>([]);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   const [isBadgeClaimed, setIsBadgeClaimed] = useState(false);
   const [showSuccessBadge, setShowSuccessBadge] = useState(false);
 
   const badgeRef = useRef<HTMLDivElement>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
 
   const playDropSound = () => {
     try {
@@ -1724,29 +1723,16 @@ function MitigasiPage() {
     }
   };
 
-  const handleDragEnd = (event: any) => {
-    const { active, over } = event;
-    setActiveItemId(null);
-
-    if (!over) return;
-
-    const itemId = active.id;
-    const overId = over.id;
-
-    // Find the item in pool
-    const item = pool.find(i => i.id === itemId);
-    if (!item) return;
-
-    // Unified Audio Feedback for action
+  const handleSelectItem = (item: MitigationItem, target: 'benar' | 'salah') => {
     playDropSound();
-
-    if (overId === 'benar') {
+    
+    if (target === 'benar') {
       setBenar(prev => [...prev, item]);
-      setPool(prev => prev.filter(i => i.id !== itemId));
-    } else if (overId === 'salah') {
+    } else {
       setSalah(prev => [...prev, item]);
-      setPool(prev => prev.filter(i => i.id !== itemId));
     }
+    
+    setPool(prev => prev.filter(i => i.id !== item.id));
   };
 
   const resetGame = () => {
@@ -1757,8 +1743,6 @@ function MitigasiPage() {
     setIsFinished(false);
     setShowSuccessBadge(false);
   };
-
-  const activeItemData = initialItems.find(i => i.id === activeItemId);
 
   return (
     <div className="p-6 space-y-6 bg-cream-bg min-h-[700px] flex flex-col items-center pb-40 relative select-none">
@@ -1840,112 +1824,82 @@ function MitigasiPage() {
         )}
       </AnimatePresence>
       
-      <div className="text-center space-y-2 w-full">
+      <div className="text-center space-y-2 w-full max-w-md">
         <div className="flex justify-center gap-2 mb-2">
           <span className="px-3 py-1 bg-brick-red text-white text-[10px] font-black rounded-full uppercase tracking-tighter shadow-sm">Fase Mitigasi</span>
         </div>
         <h2 className="text-3xl font-black text-stone-900 tracking-tighter uppercase leading-none italic drop-shadow-sm">Siaga Gempa</h2>
-        <p className="text-brick-red/60 text-[10px] font-black uppercase tracking-widest leading-relaxed px-4">Tarik aksi ke kolom yang tepat!</p>
+        <p className="text-stone-500 text-[10px] font-black uppercase tracking-widest leading-relaxed">Ketuk pilihan yang tepat untuk setiap tindakan!</p>
       </div>
 
-      <DndContext 
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={({active}) => setActiveItemId(active.id as string)}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-3 w-full">
-          <DropZone 
-            id="benar" 
-            title="Benar (✓)" 
-            items={benar} 
-            icon={<CheckCircle2 size={18} strokeWidth={3} />} 
-            color="border-green-500 bg-green-500 text-white" 
-            showFeedback={showFeedback}
-          />
-          <DropZone 
-            id="salah" 
-            title="Salah (×)" 
-            items={salah} 
-            icon={<XCircle size={18} strokeWidth={3} />} 
-            color="border-red-500 bg-red-500 text-white" 
-            showFeedback={showFeedback}
-          />
-        </div>
-
-        <div className="w-full space-y-4 pt-4 border-t-2 border-stone-200/50 mt-2">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest flex items-center gap-2">
-              <MousePointer2 size={12} /> Daftar Aksi
-            </h3>
-            {pool.length > 0 && (
-              <span className="text-[10px] font-black text-brick-red bg-brick-red/5 px-2 py-0.5 rounded-full animate-pulse">{pool.length} Tersisa</span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <SortableContext items={pool.map(i => i.id)} strategy={verticalListSortingStrategy}>
+      <div className="w-full max-w-md space-y-4">
+        {pool.length > 0 ? (
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
               {pool.map((item) => (
-                <DraggableItem key={item.id} item={item} disabled={showFeedback} />
+                <MitigationItemCard 
+                  key={item.id} 
+                  item={item} 
+                  onSelect={(dest) => handleSelectItem(item, dest)} 
+                />
               ))}
-            </SortableContext>
+            </AnimatePresence>
           </div>
-          
-          {pool.length === 0 && !showFeedback && (
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="p-6 bg-brick-red/5 rounded-[32px] border-2 border-brick-red/20 border-dashed text-center shadow-inner"
+        ) : !isFinished && !showFeedback && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="flex flex-col gap-4 w-full"
+          >
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setShowFeedback(true);
+                const isAllCorrect = benar.every(i => i.isCorrect) && salah.every(i => !i.isCorrect) && benar.length + salah.length === initialItems.length;
+                if (isAllCorrect) {
+                  setIsFinished(true);
+                  setShowSuccessBadge(true);
+                  playWinSound();
+                  setTimeout(() => setShowSuccessBadge(false), 4000);
+                } else {
+                  playFailSound();
+                }
+              }}
+              className="w-full py-6 bg-stone-900 text-white rounded-[32px] font-black uppercase tracking-tighter italic text-xl shadow-2xl hover:bg-stone-800 transition-all border-b-4 border-stone-950 flex items-center justify-center gap-3"
             >
-              <p className="text-xs font-black text-brick-red uppercase italic">Semua aksi sudah dipilah!</p>
-              <p className="text-[10px] font-bold text-brick-red/50 mt-1 uppercase tracking-widest">Silahkan cek jawabanmu.</p>
-            </motion.div>
-          )}
-        </div>
+              <Zap size={24} /> CEK JAWABAN SAYA
+            </motion.button>
+          </motion.div>
+        )}
+      </div>
 
-        <DragOverlay zIndex={1000}>
-          {activeItemData ? (
-            <div className="p-3 bg-white rounded-2xl border-4 border-brick-red shadow-2xl flex items-center gap-3 cursor-grabbing scale-110 rotate-3 ring-4 ring-brick-red/20">
-              <div className="w-8 h-8 rounded-lg bg-brick-red text-white flex items-center justify-center shrink-0">
-                <Grab size={14} />
-              </div>
-              <span className="text-[10px] font-black text-stone-900 leading-tight">{activeItemData.text}</span>
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <ResultZone 
+          id="benar" 
+          title="Tindakan Benar" 
+          items={benar} 
+          icon={<CheckCircle2 size={18} className="text-green-600" />} 
+          color="border-green-200 bg-green-50 text-green-700" 
+          showFeedback={showFeedback}
+        />
+        <ResultZone 
+          id="salah" 
+          title="Tindakan Salah" 
+          items={salah} 
+          icon={<XCircle size={18} className="text-red-600" />} 
+          color="border-red-200 bg-red-50 text-red-700" 
+          showFeedback={showFeedback}
+        />
+      </div>
 
-      <div className="flex gap-3 w-full pt-4">
+      {(showFeedback || isFinished) && (
         <button 
           onClick={resetGame}
-          className="flex-1 py-4 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-[24px] font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95 border-b-4 border-stone-200"
+          className="mt-6 px-10 py-4 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-full font-black text-xs transition-all flex items-center justify-center gap-2 active:scale-95"
         >
-          <RefreshCcw size={16} /> ULANGI
+          <RefreshCcw size={16} /> MULAI ULANG MISI
         </button>
-        <button 
-          onClick={() => {
-            setShowFeedback(true);
-            const isAllCorrect = benar.every(i => i.isCorrect) && salah.every(i => !i.isCorrect) && benar.length + salah.length === initialItems.length;
-            if (isAllCorrect) {
-              setIsFinished(true);
-              setShowSuccessBadge(true);
-              playWinSound();
-              setTimeout(() => setShowSuccessBadge(false), 4000);
-            } else {
-              playFailSound();
-            }
-          }}
-          disabled={pool.length > 0 || showFeedback}
-          className={`flex-[2] py-4 rounded-[24px] font-black text-xs shadow-xl transition-all flex items-center justify-center gap-2 active:scale-95 ${
-            pool.length > 0 || showFeedback
-              ? 'bg-stone-200 text-stone-400 cursor-not-allowed opacity-50' 
-              : 'bg-brick-red text-white hover:bg-red-700 shadow-red-200 border-b-4 border-red-900'
-          }`}
-        >
-          {showFeedback ? <LightbulbIcon size={16} /> : <Zap size={16} />} 
-          {showFeedback ? 'HASIL SIMULASI' : 'CEK JAWABAN'}
-        </button>
-      </div>
+      )}
 
       <AnimatePresence>
         {isFinished && (
